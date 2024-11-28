@@ -13,14 +13,9 @@ import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.config.oauth2.client.CommonOAuth2Provider;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.client.registration.ClientRegistration;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.access.ExceptionTranslationFilter;
 
 @Configuration
 @AllArgsConstructor
@@ -57,20 +52,4 @@ public class ProjectConfigSecurity {
     providerManager.setEraseCredentialsAfterAuthentication(false);
     return providerManager;
   }
-
-  @Bean
-  public ClientRegistration googleRegistration() {
-    String googleClientId = env.getProperty("google.clientId");
-    String googleClientSecret = env.getProperty("google.clientSecret");
-    return CommonOAuth2Provider.GOOGLE.getBuilder("google").clientId(googleClientId).clientSecret(googleClientSecret).build();
-  }
-
-  @Bean
-  ClientRegistrationRepository clientRegistrationRepository() {
-    // Tạo ra các registration object. Mỗi object này đại diện cho 1 Auth Server mà chúng ta đã đăng kí.
-    ClientRegistration google = googleRegistration();
-    return new InMemoryClientRegistrationRepository(google);
-  }
-
-
 }

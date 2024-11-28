@@ -1,0 +1,43 @@
+version: "3.8"
+
+# Lưu ý rằng các container sẽ giao tiếp với nhau theo mạng nội bộ riêng. Trong mạng nội bộ đó, các container sẽ giao tiếp thông qua port default của container đó.
+# Ví dụ: auth_service_db sẽ giao tiếp với auth_service thông qua port 3306 (default của MySQL) của auth_service_db.
+# Việc chúng ta mapping port 3307 của auth_service_db với port 3306 của host machine chỉ giúp chúng ta có thể truy cập vào MySQL từ bên ngoài.
+# Còn auth_service sẽ giao tiếp với auth_service_db thông qua port 3306 của auth_service_db.
+
+services:
+  mysql_db:
+    image: mysql:8.2
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=auth_service_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - auth_service_data:/var/lib/mysql
+
+  auth_service:
+    image: auth-service:1.0
+    depends_on:
+      - mysql_db
+    restart: on-failure
+    env_file:
+      - .env
+    ports:
+      - "8081:8080"
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql_db:3306/auth_service_db?useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - .m2:/root/.m2
+    stdin_open: true
+    tty: true
+
+volumes:
+  auth_service_data:
+    driver: local

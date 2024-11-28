@@ -78,7 +78,6 @@ public class AuthController {
 
   @PostMapping("/login")
   public ResponseEntity<ResponseData> login(@RequestBody LoginRequest loginRequest) {
-    System.out.printf("Username: %s, Password: %s\n", loginRequest.username(), loginRequest.password());
     String accessToken = "";
     String content = "";
     Authentication authentication = UsernamePasswordAuthenticationToken.unauthenticated(loginRequest.username(), loginRequest.password());
@@ -210,4 +209,8 @@ public class AuthController {
     return ResponseEntity.ok().header("Set-Cookie", cookie.toString()).body(new ResponseData(HttpStatus.OK.value(), "Logout successfully!", null));
   }
 
+  @GetMapping("/check-status")
+  public String checkStatus() {
+    return "OK";
+  }
 }
