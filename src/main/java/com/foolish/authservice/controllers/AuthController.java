@@ -198,7 +198,8 @@ public class AuthController {
     // Nếu tìm thấy token thì xoá access token có liên quan.
     String value = request.getHeader("Authorization");
     String accessToken = value.substring(7);
-    if (accessToken.isEmpty() || token.getContent().isEmpty() || !accessToken.equals(token.getAccessToken()))  return ResponseEntity.ok(new ResponseError(HttpStatus.BAD_REQUEST.value(), "Can't logout!"));
+    if (accessToken.isEmpty() || token.getContent().isEmpty() || !accessToken.equals(token.getAccessToken()))
+      return ResponseEntity.ok(new ResponseError(HttpStatus.BAD_REQUEST.value(), "Can't logout!"));
 
     refreshTokenService.delete(token);
     ResponseCookie cookie = ResponseCookie.from("refresh_token", "")
@@ -207,10 +208,5 @@ public class AuthController {
             .build();
 
     return ResponseEntity.ok().header("Set-Cookie", cookie.toString()).body(new ResponseData(HttpStatus.OK.value(), "Logout successfully!", null));
-  }
-
-  @GetMapping("/check-status")
-  public String checkStatus() {
-    return "OK";
   }
 }

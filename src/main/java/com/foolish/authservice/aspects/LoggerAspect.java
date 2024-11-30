@@ -18,7 +18,7 @@ import java.time.Instant;
 public class LoggerAspect {
 
   // Một @Pointcut thực hiện việc gom các nhóm lại với nhau. Advice sẽ làm việc với các nhóm đã match với @Pointcut này.
-  @Pointcut("execution(* com.foolish.moviereservation..*.*(..))")
+  @Pointcut("execution(* com.foolish.authservice..*.*(..))")
   public void springBeanPointCut() {
   }
 

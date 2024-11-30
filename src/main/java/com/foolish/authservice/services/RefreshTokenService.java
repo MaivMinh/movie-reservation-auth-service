@@ -34,4 +34,8 @@ public class RefreshTokenService {
   public void delete(RefreshToken token) {
     refreshTokenRepo.delete(token);
   }
+
+  public RefreshToken findByAccessToken(String accessToken) {
+    return refreshTokenRepo.findByAccessToken(accessToken);
+  }
 }
