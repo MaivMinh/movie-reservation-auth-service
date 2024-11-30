@@ -20,7 +20,7 @@ import javax.annotation.Nullable;
 @GrpcService
 @Service
 @AllArgsConstructor
-public class AuthGrpcServer extends AuthServiceGrpc.AuthServiceImplBase {
+public class AuthServiceGrpcServer extends AuthServiceGrpc.AuthServiceImplBase {
   private final AccountService accountService;
 
   @Bean
