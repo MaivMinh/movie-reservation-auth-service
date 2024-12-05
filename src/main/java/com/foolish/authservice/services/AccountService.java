@@ -46,4 +46,8 @@ public class AccountService {
     }
     return claims;
   }
+
+  public Account findAccountByEmail(String email) {
+    return accountRepo.findByEmail(email);
+  }
 }

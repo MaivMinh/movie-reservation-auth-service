@@ -5,9 +5,9 @@ import io.grpc.ServerCall;
 import io.grpc.stub.StreamObserver;
 import io.jsonwebtoken.Claims;
 import lombok.AllArgsConstructor;
-import net.devh.boot.grpc.examples.lib.AuthRequest;
-import net.devh.boot.grpc.examples.lib.AuthResponse;
-import net.devh.boot.grpc.examples.lib.AuthServiceGrpc;
+import net.devh.boot.grpc.examples.lib.IdentifyRequest;
+import net.devh.boot.grpc.examples.lib.IdentifyResponse;
+import net.devh.boot.grpc.examples.lib.IdentifyServiceGrpc;
 import net.devh.boot.grpc.server.security.authentication.GrpcAuthenticationReader;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.springframework.context.annotation.Bean;
@@ -20,7 +20,7 @@ import javax.annotation.Nullable;
 @GrpcService
 @Service
 @AllArgsConstructor
-public class AuthServiceGrpcServer extends AuthServiceGrpc.AuthServiceImplBase {
+public class IdentifyServiceGrpcServer extends IdentifyServiceGrpc.IdentifyServiceImplBase {
   private final AccountService accountService;
 
   @Bean
@@ -34,14 +34,13 @@ public class AuthServiceGrpcServer extends AuthServiceGrpc.AuthServiceImplBase {
     };
   }
 
-  @Override
-  public void doIntrospect(AuthRequest request, StreamObserver<AuthResponse> streamObserver) {
+  public void IdentifyService(IdentifyRequest request, StreamObserver<IdentifyResponse> streamObserver) {
     String token = request.getToken();
     Claims claims = accountService.doIntrospect(token);
     if (claims == null) {
-      streamObserver.onNext(AuthResponse.newBuilder().setActive(false).setUsername("").setRoles("").build());
+      streamObserver.onNext(IdentifyResponse.newBuilder().setActive(false).setUsername("").setRoles("").build());
     } else {
-      streamObserver.onNext(AuthResponse.newBuilder().setActive(true).setUsername(claims.get("username").toString()).setRoles(claims.get("roles").toString()).build());
+      streamObserver.onNext(IdentifyResponse.newBuilder().setActive(true).setUsername(claims.get("username").toString()).setRoles(claims.get("roles").toString()).build());
     }
     streamObserver.onCompleted();
   }

@@ -16,6 +16,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 @AllArgsConstructor
@@ -24,7 +26,6 @@ public class ProjectConfigSecurity {
 
   @Bean
   SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    http.cors(AbstractHttpConfigurer::disable);
     http.sessionManagement(config -> config.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
     http.csrf(AbstractHttpConfigurer::disable);
     http
@@ -51,5 +52,17 @@ public class ProjectConfigSecurity {
     ProviderManager providerManager = new ProviderManager(authenticationProvider);
     providerManager.setEraseCredentialsAfterAuthentication(false);
     return providerManager;
+  }
+
+  // CORS Configuration
+  @Bean
+  public WebMvcConfigurer corsConfigurer() {
+    String url = env.getProperty("API_GATEWAY_URL");
+    return new WebMvcConfigurer() {
+      @Override
+      public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**").allowedOrigins(url, "http://localhost:8080").allowCredentials(true).exposedHeaders("*").allowedMethods("*");
+      }
+    };
   }
 }

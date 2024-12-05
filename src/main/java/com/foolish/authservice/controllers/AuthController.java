@@ -9,7 +9,6 @@ import com.foolish.authservice.records.ROLE;
 import com.foolish.authservice.response.ResponseData;
 import com.foolish.authservice.response.ResponseError;
 import com.foolish.authservice.services.AccountService;
-import com.foolish.authservice.services.OAuth2Service;
 import com.foolish.authservice.services.RefreshTokenService;
 import com.foolish.authservice.services.RoleService;
 import io.jsonwebtoken.Claims;
@@ -30,6 +29,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.crypto.SecretKey;
@@ -47,7 +47,6 @@ public class AuthController {
 
   private final AccountService accountService;
   private final PasswordEncoder passwordEncoder;
-  private final AccountMapper accountMapper;
   private final RoleService roleService;
   private final AuthenticationManager authenticationManager;
   private final Environment env;
@@ -57,8 +56,8 @@ public class AuthController {
   public ResponseEntity<ResponseData> register(@RequestBody @Valid Account account) {
     // Hàm tạo một Account mới bên trong hệ thống.
     AccountDTO isExisted = accountService.findAccountDTOByUsername(account.getUsername());
-    if (isExisted != null)
-      return ResponseEntity.status(HttpStatus.OK.value()).body(new ResponseError(HttpStatus.CONFLICT.value(), "Account already exists"));
+    if (accountService.findAccountByUsername(account.getUsername()) != null || accountService.findAccountByUsername(account.getEmail()) != null)
+      return ResponseEntity.ok().body(new ResponseError(HttpStatus.CONFLICT.value(), "Account already exists"));
     // Không tìm thấy Username. Tạo Account mới.
     account.setRole(roleService.findByRoleName(ROLE.USER));
     account.setPassword(passwordEncoder.encode(account.getPassword()));
@@ -69,10 +68,8 @@ public class AuthController {
       return ResponseEntity.ok().body(new ResponseError(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Failed to register a new user"));
     }
 
-    if (account.getId() > 0) {
-      AccountDTO dto = accountMapper.toDTO(account);
-      return ResponseEntity.status(HttpStatus.OK).body(new ResponseData(HttpStatus.CREATED.value(), "Created successfully", dto));
-    }
+    if (account.getId() > 0)
+      return ResponseEntity.ok().body(new ResponseData(HttpStatus.CREATED.value(), "Created successfully", null));
     return ResponseEntity.ok().body(new ResponseError(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Failed to register a new user"));
   }
 
@@ -83,39 +80,29 @@ public class AuthController {
     Authentication authentication = UsernamePasswordAuthenticationToken.unauthenticated(loginRequest.username(), loginRequest.password());
     Authentication authenticationResponse = authenticationManager.authenticate(authentication); // Thực hiện authenticate bằng cách dùng @Bean Manager đã tạo trong ProjectConfigSecurity để xác thực.
 
-    AccountDTO dto = null;
-    if (null != authenticationResponse && authenticationResponse.isAuthenticated()) {
-      if (null != env) {
-        // Thực hiện việc tạo access-token và refresh-token.
+    if (authenticationResponse != null && authenticationResponse.isAuthenticated()) {
+      // Thực hiện việc tạo access-token và refresh-token.
+      Account account = accountService.findAccountByUsername(authenticationResponse.getName());
+      String username = authenticationResponse.getName();
+      content = RefreshTokenService.generateRefreshToken(username); // Vì mã hoá thông tin dựa vào username nên chuỗi mã hoá mặc định là duy nhất.
 
-        String username = authenticationResponse.getName();
-        content = RefreshTokenService.generateRefreshToken(username); // Vì mã hoá thông tin dựa vào username nên chuỗi mã hoá mặc định là duy nhất.
-
-        RefreshToken token = refreshTokenService.findByContent(content);
-        if (token == null) {
-          token = new RefreshToken();
-          token.setContent(content);
-          token.setUsername(username);
-          token.setValidUntil(new Timestamp(new Date(new Date().getTime() + 30 * 24 * 3600 * 1000L).getTime()));  // Có thời hạn 30 ngày.
-        }
-        String secret = env.getProperty("SECRET_KEY");
-        SecretKey secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        accessToken = Jwts.builder().setIssuer("Authorization service").setSubject("Access Token")
-                .claim("username", authenticationResponse.getName())
-                .claim("roles", authenticationResponse.getAuthorities().stream().map(
-                        GrantedAuthority::getAuthority).collect(Collectors.joining(",")))
-                .setIssuedAt(new Date())
-                .setExpiration(new Date((new Date()).getTime() + 7 * 24 * 3600 * 1000L))
-                .signWith(secretKey).compact();
-        token.setAccessToken(accessToken);
-        refreshTokenService.save(token);
-      } else log.error("COULD NOT FIND ENVIRONMENT VARIABLE!");
+      RefreshToken token = refreshTokenService.findByContent(content);
+      if (token == null) {
+        token = new RefreshToken();
+        token.setContent(content);
+        token.setUsername(username);
+        token.setValidUntil(new Timestamp(new Date(new Date().getTime() + 30 * 24 * 3600 * 1000L).getTime()));  // Có thời hạn 30 ngày.
+      }
+      String secret = env.getProperty("SECRET_KEY");
+      SecretKey secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+      accessToken = Jwts.builder().setIssuer("Authorization server").setSubject("Access Token").claim("user_id", account.getId()).setIssuedAt(new Date()).setExpiration(new Date((new Date()).getTime() + 7 * 24 * 3600 * 1000L)).signWith(secretKey).compact();
+      token.setAccessToken(accessToken);
+      refreshTokenService.save(token);
     } else {
-      log.error("UNAUTHENTICATED USER!");
-      return ResponseEntity.status(200).body(new ResponseError(HttpStatus.UNAUTHORIZED.value(), HttpStatus.UNAUTHORIZED.getReasonPhrase()));
+      log.error("Unauthenticated user!");
+      return ResponseEntity.ok().body(new ResponseError(HttpStatus.UNAUTHORIZED.value(), "Unauthenticated user!"));
     }
-
-    // Thống nhất là sẽ chỉ gửi access-token và refresh-token ở cookies. access-token sẽ có thời hạn là 7 days, refresh-token là 15 days.
+    // Thống nhất là sẽ chỉ gửi access-token và refresh-token ở cookies. access-token sẽ có thời hạn là 7 days, refresh-token là 30 days.
     ResponseCookie refreshCookie = ResponseCookie.from("refresh_token").value(content).httpOnly(true).path("/").maxAge(30 * 24 * 3600L).build();
 
     // Thống nhất không gửi dto.
@@ -134,8 +121,13 @@ public class AuthController {
         break;
       }
     }
+    if (!StringUtils.hasText(refreshToken)) {
+      return ResponseEntity.ok().body(new ResponseError(HttpStatus.BAD_REQUEST.value(), "Refresh token mustn't be empty!"));
+    }
     String value = request.getHeader("Authorization");
     String accessToken = value.substring(7); // Bỏ qua Bearer.
+    if (accessToken.isEmpty())
+      return ResponseEntity.ok().body(new ResponseError(HttpStatus.BAD_REQUEST.value(), "Access token mustn't be empty!"));
 
     // Xác thực xem access-token đã hết hạn hay chưa.
     RefreshToken token = null;
@@ -163,12 +155,7 @@ public class AuthController {
     if (token.getId() > 0 && token.getValidUntil().getTime() > current.getTime()) {
       // Trả về cho Client một access-token mới.
       AccountDTO dto = accountService.findAccountDTOByUsername(token.getUsername());
-      String jwt = Jwts.builder().setIssuer("Backend Advanced Web").setSubject("Access Token")
-              .claim("username", dto.getUsername())
-              .claim("roles", dto.getRole())
-              .setIssuedAt(new Date())
-              .setExpiration(new Date((new Date()).getTime() + 7 * 24 * 3600 * 1000L))
-              .signWith(secretKey).compact();
+      String jwt = Jwts.builder().setIssuer("Authorization Server").setSubject("Access Token").claim("user_id", dto.getId()).setExpiration(new Date((new Date()).getTime() + 7 * 24 * 3600 * 1000L)).signWith(secretKey).compact();
 
       // Update lại jwt ở Tokens trong DB.
       token.setAccessToken(jwt);
@@ -177,7 +164,7 @@ public class AuthController {
     // 2. Xét trường hợp là hết hạn, xoá refresh token dưới DB rồi sau đó trả về response yêu cầu Client đăng nhập lại.
     refreshTokenService.deleteRefreshTokenByContent(refreshToken.toString());
     // deleted successfully.
-    return ResponseEntity.status(HttpStatus.OK).body(new ResponseError(HttpStatus.UNAUTHORIZED.value(), "refresh token is expired, please login again!"));
+    return ResponseEntity.ok().body(new ResponseError(HttpStatus.UNAUTHORIZED.value(), "refresh token is expired, please login again!"));
   }
 
   @GetMapping("/logout")
@@ -191,6 +178,9 @@ public class AuthController {
         break;
       }
     }
+    if (!StringUtils.hasText(refreshToken)) {
+      return ResponseEntity.ok().body(new ResponseError(HttpStatus.BAD_REQUEST.value(), "Refresh token mustn't be empty!"));
+    }
     RefreshToken token = refreshTokenService.findByContent(refreshToken.toString());
     if (token == null) {
       return ResponseEntity.status(HttpStatus.OK).body(new ResponseError(HttpStatus.BAD_REQUEST.value(), "Can't logout!"));
@@ -202,11 +192,13 @@ public class AuthController {
       return ResponseEntity.ok(new ResponseError(HttpStatus.BAD_REQUEST.value(), "Can't logout!"));
 
     refreshTokenService.delete(token);
-    ResponseCookie cookie = ResponseCookie.from("refresh_token", "")
-            .path("/")
-            .maxAge(0)
-            .build();
+    ResponseCookie cookie = ResponseCookie.from("refresh_token", "").path("/").maxAge(0).build();
 
     return ResponseEntity.ok().header("Set-Cookie", cookie.toString()).body(new ResponseData(HttpStatus.OK.value(), "Logout successfully!", null));
+  }
+
+  @GetMapping("/check-stats")
+  public ResponseEntity<String> checkStats() {
+    return ResponseEntity.ok().body("Hello from Authorization server");
   }
 }
