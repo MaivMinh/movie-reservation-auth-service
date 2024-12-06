@@ -34,17 +34,18 @@ public class AccountService {
     return accountRepo.findByUsername(username);
   }
 
-  public Claims doIntrospect(String token) {
+  public Account doIntrospect(String token) {
     // Thực hiện xác thực jwt token ở trong này.
     String secret = environment.getProperty("SECRET_KEY"); // Replace with your actual secret key
     SecretKey secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     Claims claims;
     try {
       claims = Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token).getBody();
+      Integer id = Integer.parseInt(claims.get("user_id").toString());
+      return accountRepo.findAccountById(id);
     } catch (RuntimeException e) {
       return null;
     }
-    return claims;
   }
 
   public Account findAccountByEmail(String email) {

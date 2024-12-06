@@ -1,5 +1,6 @@
 package com.foolish.authservice.services;
 
+import com.foolish.authservice.model.Account;
 import io.grpc.Metadata;
 import io.grpc.ServerCall;
 import io.grpc.stub.StreamObserver;
@@ -34,13 +35,14 @@ public class IdentifyServiceGrpcServer extends IdentifyServiceGrpc.IdentifyServi
     };
   }
 
-  public void IdentifyService(IdentifyRequest request, StreamObserver<IdentifyResponse> streamObserver) {
+  @Override
+  public void doIdentify(IdentifyRequest request, StreamObserver<IdentifyResponse> streamObserver) {
     String token = request.getToken();
-    Claims claims = accountService.doIntrospect(token);
-    if (claims == null) {
-      streamObserver.onNext(IdentifyResponse.newBuilder().setActive(false).setUsername("").setRoles("").build());
+    Account account = accountService.doIntrospect(token);
+    if (account == null) {
+      streamObserver.onNext(IdentifyResponse.newBuilder().setActive(false).setUserId("").setRoles("").build());
     } else {
-      streamObserver.onNext(IdentifyResponse.newBuilder().setActive(true).setUsername(claims.get("username").toString()).setRoles(claims.get("roles").toString()).build());
+      streamObserver.onNext(IdentifyResponse.newBuilder().setActive(true).setUserId(account.getId().toString()).setRoles(account.getRole().getName().toString()).build());
     }
     streamObserver.onCompleted();
   }

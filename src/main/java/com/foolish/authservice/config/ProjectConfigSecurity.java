@@ -61,7 +61,7 @@ public class ProjectConfigSecurity {
     return new WebMvcConfigurer() {
       @Override
       public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**").allowedOrigins(url, "http://localhost:8080").allowCredentials(true).exposedHeaders("*").allowedMethods("*");
+        registry.addMapping("/**").allowedOrigins(url, "http://localhost:8081").allowCredentials(true).exposedHeaders("*").allowedMethods("*");
       }
     };
   }
