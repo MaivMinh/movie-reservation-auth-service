@@ -28,11 +28,7 @@ public class ProjectConfigSecurity {
   SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http.sessionManagement(config -> config.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
     http.csrf(AbstractHttpConfigurer::disable);
-    http
-            .authorizeHttpRequests(config -> config
-                    .requestMatchers(
-                            "/api/v1/auth/**").permitAll()
-                    .anyRequest().denyAll());
+    http.authorizeHttpRequests(config -> config.anyRequest().permitAll());
     http.httpBasic(config -> config.authenticationEntryPoint(new CustomBasicAuthenticationEntryPoint()));
     http.exceptionHandling(config -> config.accessDeniedHandler(new CustomAccessDeniedHandler()));
     return http.build();

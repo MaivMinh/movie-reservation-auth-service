@@ -198,7 +198,10 @@ public class AuthController {
   }
 
   @GetMapping("/check-stats")
-  public ResponseEntity<String> checkStats() {
-    return ResponseEntity.ok().body("Hello from Authorization server");
+  public ResponseEntity<ResponseData> checkStats(HttpServletRequest request) {
+    System.out.println("X-USER-ID: " +  request.getHeader("X-USER-ID"));
+    if (request.getHeader("X-USER-ID") == null || request.getHeader("Authorization") == null)
+      return ResponseEntity.ok(new ResponseError(HttpStatus.UNAUTHORIZED.value(), "Unauthorized!"));
+    return ResponseEntity.ok().body(new ResponseData(HttpStatus.OK.value(), "Authorized!", null));
   }
 }
