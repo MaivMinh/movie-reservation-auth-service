@@ -3,6 +3,8 @@ package com.foolish.authservice.services;
 import com.foolish.authservice.mappers.AccountMapper;
 import com.foolish.authservice.model.Account;
 import com.foolish.authservice.DTOs.AccountDTO;
+import com.foolish.authservice.model.Role;
+import com.foolish.authservice.records.ROLE;
 import com.foolish.authservice.repository.AccountRepo;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -34,18 +36,13 @@ public class AccountService {
     return accountRepo.findByUsername(username);
   }
 
-  public Account doIntrospect(String token) {
-    // Thực hiện xác thực jwt token ở trong này.
-    String secret = environment.getProperty("SECRET_KEY"); // Replace with your actual secret key
-    SecretKey secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-    Claims claims;
-    try {
-      claims = Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token).getBody();
-      Integer id = Integer.parseInt(claims.get("user_id").toString());
-      return accountRepo.findAccountById(id);
-    } catch (RuntimeException e) {
-      return null;
+  public Role doIntrospect(String userId) {
+    // Thực hiện tìm kiếm ROLE của user.
+    Account account = accountRepo.findAccountById(Integer.parseInt(userId));
+    if (account != null && account.getId() > 0) {
+      return account.getRole();
     }
+    return null;
   }
 
   public Account findAccountByEmail(String email) {

@@ -27,7 +27,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -37,7 +36,6 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
