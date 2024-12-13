@@ -194,12 +194,4 @@ public class AuthController {
 
     return ResponseEntity.ok().header("Set-Cookie", cookie.toString()).body(new ResponseData(HttpStatus.OK.value(), "Logout successfully!", null));
   }
-
-  @GetMapping("/check-stats")
-  public ResponseEntity<ResponseData> checkStats(HttpServletRequest request) {
-    System.out.println("X-USER-ID: " +  request.getHeader("X-USER-ID"));
-    if (request.getHeader("X-USER-ID") == null || request.getHeader("Authorization") == null)
-      return ResponseEntity.ok(new ResponseError(HttpStatus.UNAUTHORIZED.value(), "Unauthorized!"));
-    return ResponseEntity.ok().body(new ResponseData(HttpStatus.OK.value(), "Authorized!", null));
-  }
 }
